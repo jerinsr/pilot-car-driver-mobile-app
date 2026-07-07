@@ -3,7 +3,6 @@ import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import {
   CheckCircle2,
   ChevronRight,
-  ChevronLeft,
   X,
   Zap,
   Clock,
@@ -12,7 +11,7 @@ import {
 import { AssignedJob } from "./AssignedJobCard";
 
 type PayoutMethod = "standard" | "instant";
-type Step = "confirm" | "payout";
+type Step = "confirm" | "payout" | "success";
 
 interface CompleteJobModalProps {
   open: boolean;
@@ -47,30 +46,42 @@ export function CompleteJobModal({
     payoutMethod === "standard"
       ? STANDARD_PAYOUT_FEE
       : jobFee * INSTANT_PAYOUT_RATE;
-  const totalAmount = jobFee - payoutFee - PAYMENT_PROCESSING_FEE - PLATFORM_FEE;
+  const totalAmount = jobFee + payoutFee + PAYMENT_PROCESSING_FEE + PLATFORM_FEE;
 
-  const handleClose = () => {
+  const reset = () => {
     setStep("confirm");
     setPayoutMethod("standard");
-    onClose();
   };
 
-  const handleConfirm = () => {
+  const handleClose = () => {
+    if (step === "success") {
+      // Job is already confirmed — dismissing the success screen continues the flow
+      onConfirm(payoutMethod);
+    } else {
+      onClose();
+    }
+    reset();
+  };
+
+  const handleDone = () => {
     onConfirm(payoutMethod);
-    setStep("confirm");
-    setPayoutMethod("standard");
+    reset();
   };
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
       <SheetContent
         side="bottom"
-        className="rounded-t-2xl p-0 flex flex-col gap-0 overflow-hidden"
-        style={{ height: step === "confirm" ? "auto" : "92dvh" }}
+        className="rounded-t-2xl p-0 flex flex-col gap-0 overflow-hidden [&>button]:hidden"
+        style={{ height: step === "payout" ? "92dvh" : "auto" }}
         aria-describedby={undefined}
       >
         <SheetTitle className="sr-only">
-          {step === "confirm" ? "Complete Job Confirmation" : "Select Payout Method"}
+          {step === "confirm"
+            ? "Complete Job Confirmation"
+            : step === "payout"
+              ? "Select Payout Method"
+              : "Job Completed"}
         </SheetTitle>
 
         {/* Drag handle */}
@@ -138,13 +149,7 @@ export function CompleteJobModal({
           <>
             {/* Header */}
             <div className="px-5 pt-2 pb-4 shrink-0">
-              <div className="flex items-center justify-between mb-1">
-                <button
-                  onClick={() => setStep("confirm")}
-                  className="flex items-center gap-1 text-xs text-gray-500 font-medium"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" /> Back
-                </button>
+              <div className="flex items-center justify-end mb-1">
                 <button
                   onClick={handleClose}
                   className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center"
@@ -246,15 +251,15 @@ export function CompleteJobModal({
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500">Payout Processing Fee</span>
-                    <span className="text-sm text-red-500">−${fmt(payoutFee)}</span>
+                    <span className="text-sm text-gray-700">${fmt(payoutFee)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500">Payment Processing Fee</span>
-                    <span className="text-sm text-red-500">−${fmt(PAYMENT_PROCESSING_FEE)}</span>
+                    <span className="text-sm text-gray-700">${fmt(PAYMENT_PROCESSING_FEE)}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-500">Overwize Platform Fee</span>
-                    <span className="text-sm text-red-500">−${fmt(PLATFORM_FEE)}</span>
+                    <span className="text-sm text-gray-700">${fmt(PLATFORM_FEE)}</span>
                   </div>
                   <div className="h-px bg-gray-200" />
                   <div className="flex justify-between items-center py-0.5">
@@ -283,7 +288,7 @@ export function CompleteJobModal({
                 <span className="text-xl font-bold text-green-600">${fmt(totalAmount)}</span>
               </div>
               <button
-                onClick={handleConfirm}
+                onClick={() => setStep("success")}
                 className="w-full h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-2 active:bg-[#e08820] transition-colors"
               >
                 Confirm & Complete Job
@@ -291,6 +296,57 @@ export function CompleteJobModal({
               </button>
             </div>
           </>
+        )}
+
+        {/* ── STEP 3: Success ── */}
+        {step === "success" && (
+          <div className="px-5 pb-8 pt-4 space-y-5">
+            {/* Icon + Title */}
+            <div className="flex flex-col items-center text-center pt-2">
+              <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-3">
+                <CheckCircle2 className="w-7 h-7 text-green-600" />
+              </div>
+              <h2 className="text-lg font-bold text-gray-900">Job Completed!</h2>
+              <p className="text-[11px] text-gray-400 mt-0.5 font-mono">{job.id}</p>
+              <p className="text-sm text-gray-600 leading-relaxed mt-2 max-w-[280px]">
+                Your job has been marked as complete. The invoice will be sent to
+                the Truck Driver for payment.
+              </p>
+            </div>
+
+            {/* Payout summary */}
+            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <div className="px-4 py-3 space-y-2.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-500">Payout Method</span>
+                  <span className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
+                    {payoutMethod === "instant" ? (
+                      <>
+                        <Zap className="w-3.5 h-3.5 text-[#f89823]" /> Instant
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="w-3.5 h-3.5 text-gray-500" /> Standard
+                      </>
+                    )}
+                  </span>
+                </div>
+                <div className="h-px bg-gray-200" />
+                <div className="flex justify-between items-center py-0.5">
+                  <span className="text-sm font-bold text-gray-900">Total Amount</span>
+                  <span className="text-lg font-bold text-green-600">${fmt(totalAmount)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Done */}
+            <button
+              onClick={handleDone}
+              className="w-full h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center active:bg-[#e08820] transition-colors"
+            >
+              Done
+            </button>
+          </div>
         )}
       </SheetContent>
     </Sheet>
