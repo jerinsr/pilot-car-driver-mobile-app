@@ -17,6 +17,8 @@ function figmaAssetResolver() {
 }
 
 export default defineConfig({
+  // Served from https://<user>.github.io/pilot-car-driver-mobile-app/ on GitHub Pages
+  base: process.env.GITHUB_PAGES ? '/pilot-car-driver-mobile-app/' : '/',
   plugins: [
     figmaAssetResolver(),
     // The React and Tailwind plugins are both required for Make, even if
