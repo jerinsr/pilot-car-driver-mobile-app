@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import {
+  Check,
   CheckCircle2,
   ChevronRight,
   X,
@@ -148,92 +149,123 @@ export function CompleteJobModal({
         {step === "payout" && (
           <>
             {/* Header */}
-            <div className="px-5 pt-2 pb-4 shrink-0">
-              <div className="flex items-center justify-end mb-1">
+            <div className="px-5 pt-1 pb-4 shrink-0 border-b border-gray-100">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-gray-900">Select Payout Method</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    How would you like to receive your payment?
+                  </p>
+                </div>
                 <button
                   onClick={handleClose}
-                  className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center"
+                  aria-label="Close"
+                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 cursor-pointer active:bg-gray-200 transition-colors"
                 >
-                  <X className="w-3.5 h-3.5 text-gray-500" />
+                  <X className="w-4 h-4 text-gray-500" />
                 </button>
               </div>
-              <h2 className="text-base font-bold text-gray-900">Select Payout Method</h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                How would you like to receive your payment?
-              </p>
             </div>
 
             {/* Scrollable content */}
-            <div className="flex-1 overflow-y-auto px-5 space-y-3 pb-4">
+            <div className="flex-1 overflow-y-auto px-5 pt-4 space-y-5 pb-4">
 
               {/* Payout Options */}
-              <div className="space-y-2">
+              <div role="radiogroup" aria-label="Payout method" className="space-y-2.5">
                 {/* Standard */}
                 <button
+                  role="radio"
+                  aria-checked={payoutMethod === "standard"}
                   onClick={() => setPayoutMethod("standard")}
-                  className={`w-full text-left rounded-xl border-2 px-4 py-3.5 transition-colors ${
+                  className={`w-full text-left rounded-xl border-2 p-4 transition-colors cursor-pointer ${
                     payoutMethod === "standard"
                       ? "border-[#f89823] bg-[#fff7ed]"
-                      : "border-gray-200 bg-white"
+                      : "border-gray-200 bg-white active:bg-gray-50"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
-                      payoutMethod === "standard"
-                        ? "border-[#f89823]"
-                        : "border-gray-300"
-                    }`}>
-                      {payoutMethod === "standard" && (
-                        <div className="w-2 h-2 rounded-full bg-[#f89823]" />
-                      )}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        payoutMethod === "standard" ? "bg-[#f89823]" : "bg-gray-100"
+                      }`}
+                    >
+                      <Clock
+                        className={`w-5 h-5 ${
+                          payoutMethod === "standard" ? "text-white" : "text-gray-500"
+                        }`}
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-gray-500 shrink-0" />
                         <span className="text-sm font-semibold text-gray-900">Standard Payout</span>
-                        <span className="ml-auto text-[11px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Default</span>
+                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          Default
+                        </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">ACH (Canada) / EFT (USA)</p>
-                      <p className="text-xs text-gray-400">Standard processing time</p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-[11px] text-gray-500">Payout Processing Fee</span>
-                        <span className="text-[11px] font-semibold text-gray-700">$1.50</span>
-                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">ACH (Canada) / EFT (USA)</p>
+                      <p className="text-xs text-gray-400">
+                        ${fmt(STANDARD_PAYOUT_FEE)} processing fee
+                      </p>
+                    </div>
+                    <div
+                      className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-colors ${
+                        payoutMethod === "standard"
+                          ? "bg-[#f89823]"
+                          : "border-2 border-gray-300"
+                      }`}
+                    >
+                      {payoutMethod === "standard" && (
+                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                      )}
                     </div>
                   </div>
                 </button>
 
                 {/* Instant */}
                 <button
+                  role="radio"
+                  aria-checked={payoutMethod === "instant"}
                   onClick={() => setPayoutMethod("instant")}
-                  className={`w-full text-left rounded-xl border-2 px-4 py-3.5 transition-colors ${
+                  className={`w-full text-left rounded-xl border-2 p-4 transition-colors cursor-pointer ${
                     payoutMethod === "instant"
                       ? "border-[#f89823] bg-[#fff7ed]"
-                      : "border-gray-200 bg-white"
+                      : "border-gray-200 bg-white active:bg-gray-50"
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center ${
-                      payoutMethod === "instant"
-                        ? "border-[#f89823]"
-                        : "border-gray-300"
-                    }`}>
-                      {payoutMethod === "instant" && (
-                        <div className="w-2 h-2 rounded-full bg-[#f89823]" />
-                      )}
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        payoutMethod === "instant" ? "bg-[#f89823]" : "bg-gray-100"
+                      }`}
+                    >
+                      <Zap
+                        className={`w-5 h-5 ${
+                          payoutMethod === "instant" ? "text-white" : "text-gray-500"
+                        }`}
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-[#f89823] shrink-0" />
                         <span className="text-sm font-semibold text-gray-900">Instant Payout</span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Receive your payment instantly</p>
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-[11px] text-gray-500">Payout Processing Fee</span>
-                        <span className="text-[11px] font-semibold text-gray-700">
-                          ${fmt(jobFee * INSTANT_PAYOUT_RATE)} (1.5%)
+                        <span className="text-[10px] font-semibold text-[#f89823] bg-[#f89823]/10 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          Fastest
                         </span>
                       </div>
+                      <p className="text-xs text-gray-500 mt-0.5">Receive your payment instantly</p>
+                      <p className="text-xs text-gray-400">
+                        ${fmt(jobFee * INSTANT_PAYOUT_RATE)} processing fee (1.5%)
+                      </p>
+                    </div>
+                    <div
+                      className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-colors ${
+                        payoutMethod === "instant"
+                          ? "bg-[#f89823]"
+                          : "border-2 border-gray-300"
+                      }`}
+                    >
+                      {payoutMethod === "instant" && (
+                        <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                      )}
                     </div>
                   </div>
                 </button>
@@ -261,11 +293,10 @@ export function CompleteJobModal({
                     <span className="text-sm text-gray-500">Overwize Platform Fee</span>
                     <span className="text-sm text-gray-700">${fmt(PLATFORM_FEE)}</span>
                   </div>
-                  <div className="h-px bg-gray-200" />
-                  <div className="flex justify-between items-center py-0.5">
-                    <span className="text-sm font-bold text-gray-900">Total Amount</span>
-                    <span className="text-lg font-bold text-green-600">${fmt(totalAmount)}</span>
-                  </div>
+                </div>
+                <div className="px-4 py-3 bg-green-50 border-t border-green-100 flex justify-between items-center">
+                  <span className="text-sm font-bold text-gray-900">Total Amount</span>
+                  <span className="text-lg font-bold text-green-600">${fmt(totalAmount)}</span>
                 </div>
               </div>
 
@@ -284,12 +315,12 @@ export function CompleteJobModal({
             {/* Sticky CTA */}
             <div className="shrink-0 px-5 pb-8 pt-3 border-t border-gray-100 bg-white">
               <div className="flex items-baseline justify-between mb-3">
-                <span className="text-xs text-gray-500">Your payout</span>
+                <span className="text-xs text-gray-500">Total Amount</span>
                 <span className="text-xl font-bold text-green-600">${fmt(totalAmount)}</span>
               </div>
               <button
                 onClick={() => setStep("success")}
-                className="w-full h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-2 active:bg-[#e08820] transition-colors"
+                className="w-full h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer active:bg-[#e08820] transition-colors"
               >
                 Confirm & Complete Job
                 <ChevronRight className="w-4 h-4" />
