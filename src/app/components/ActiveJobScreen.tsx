@@ -5,14 +5,12 @@ import { Card, CardContent } from './ui/card';
 import {
   ArrowLeft,
   Navigation,
-  Phone,
   AlertTriangle,
   MapPin,
   Flag,
   Clock,
   Gauge,
   ChevronRight,
-  Coffee,
   Timer,
   CircleStop,
   Maximize2,
@@ -25,8 +23,6 @@ import {
 } from 'lucide-react';
 import { AssignedJob } from './AssignedJobCard';
 import { calculateElapsedTime } from './PilotJobStateMachine';
-import { AddBreakModal } from './AddBreakModal';
-import { AddWaitingTimeModal } from './AddWaitingTimeModal';
 import { EndJobModal } from './EndJobModal';
 import { CompleteJobModal } from './CompleteJobModal';
 import {
@@ -71,8 +67,6 @@ export default function ActiveJobScreen({
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   
   // Modal states
-  const [showBreakModal, setShowBreakModal] = useState(false);
-  const [showWaitingModal, setShowWaitingModal] = useState(false);
   const [showEndJobModal, setShowEndJobModal] = useState(false);
   const [showCompleteJobModal, setShowCompleteJobModal] = useState(false);
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
@@ -125,41 +119,6 @@ export default function ActiveJobScreen({
     }, 15000);
     return () => clearInterval(timer);
   }, []);
-
-  const handleSaveBreak = (breakData: any) => {
-    const updatedJob = { ...job };
-    if (!updatedJob.timeTracking) return;
-    updatedJob.timeTracking = {
-      ...updatedJob.timeTracking,
-      breaks: [...updatedJob.timeTracking.breaks, {
-        id: `BRK-${Date.now()}`,
-        startTime: breakData.startTime,
-        endTime: breakData.endTime,
-        duration: breakData.duration,
-        reason: breakData.reason,
-      }],
-    };
-    onJobUpdate(updatedJob);
-    setShowBreakModal(false);
-  };
-
-  const handleSaveWaitingTime = (waitingData: any) => {
-    const updatedJob = { ...job };
-    if (!updatedJob.timeTracking) return;
-    updatedJob.timeTracking = {
-      ...updatedJob.timeTracking,
-      waitingTime: [...updatedJob.timeTracking.waitingTime, {
-        id: `WAIT-${Date.now()}`,
-        startTime: waitingData.startTime,
-        endTime: waitingData.endTime,
-        duration: waitingData.duration,
-        reason: waitingData.reason,
-        billable: waitingData.billable ?? true,
-      }],
-    };
-    onJobUpdate(updatedJob);
-    setShowWaitingModal(false);
-  };
 
   const handleEndJob = () => {
     if (job.rateType === 'per-mile') {
@@ -454,24 +413,10 @@ export default function ActiveJobScreen({
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowBreakModal(true)} className="flex-col h-auto py-2 px-2">
-            <Coffee className="w-5 h-5 mb-1 text-amber-600" />
-            <span className="text-xs">Break</span>
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowWaitingModal(true)} className="flex-col h-auto py-2 px-2">
-            <Clock className="w-5 h-5 mb-1 text-blue-600" />
-            <span className="text-xs">Waiting</span>
-          </Button>
-          <Button variant="outline" size="sm" className="flex-col h-auto py-2 px-2">
-            <AlertTriangle className="w-5 h-5 mb-1 text-orange-600" />
-            <span className="text-xs">Report</span>
-          </Button>
-          <Button variant="outline" size="sm" className="flex-col h-auto py-2 px-2">
-            <Phone className="w-5 h-5 mb-1 text-green-600" />
-            <span className="text-xs">Contact</span>
-          </Button>
-        </div>
+        <Button variant="outline" className="w-full">
+          <AlertTriangle className="w-4 h-4 mr-2 text-orange-600" />
+          Report
+        </Button>
 
         <Button
           className="w-full mt-3 bg-red-600 hover:bg-red-700 text-white"
@@ -483,22 +428,6 @@ export default function ActiveJobScreen({
       </div>
 
       {/* Modals */}
-      {showBreakModal && (
-        <AddBreakModal
-          jobId={job.id}
-          onClose={() => setShowBreakModal(false)}
-          onSave={handleSaveBreak}
-        />
-      )}
-
-      {showWaitingModal && (
-        <AddWaitingTimeModal
-          jobId={job.id}
-          onClose={() => setShowWaitingModal(false)}
-          onSave={handleSaveWaitingTime}
-        />
-      )}
-
       <CompleteJobModal
         open={showCompleteJobModal}
         job={job}

@@ -5,7 +5,6 @@ import { Card, CardContent } from './ui/card';
 import {
   ArrowLeft,
   Navigation,
-  Phone,
   AlertTriangle,
   MapPin,
   Flag,
@@ -13,7 +12,6 @@ import {
   Gauge,
   Info,
   ChevronRight,
-  Coffee,
   Timer,
   CircleStop,
   MessageSquare,
@@ -32,8 +30,6 @@ interface MapNavigationViewProps {
   job: AssignedJob;
   onBack: () => void;
   onEndJob: (job: AssignedJob) => void;
-  onAddBreak: (job: AssignedJob) => void;
-  onAddWaitingTime: (job: AssignedJob) => void;
 }
 
 interface RouteStep {
@@ -47,9 +43,7 @@ interface RouteStep {
 export function MapNavigationView({
   job,
   onBack,
-  onEndJob,
-  onAddBreak,
-  onAddWaitingTime
+  onEndJob
 }: MapNavigationViewProps) {
   const [elapsedTime, setElapsedTime] = useState<string>('00:00:00');
   const [showSteps, setShowSteps] = useState(false);
@@ -377,46 +371,11 @@ export function MapNavigationView({
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="grid grid-cols-4 gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onAddBreak(job)}
-            className="flex-col h-auto py-2 px-2"
-          >
-            <Coffee className="w-5 h-5 mb-1 text-amber-600" />
-            <span className="text-xs">Break</span>
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onAddWaitingTime(job)}
-            className="flex-col h-auto py-2 px-2"
-          >
-            <Clock className="w-5 h-5 mb-1 text-blue-600" />
-            <span className="text-xs">Waiting</span>
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-col h-auto py-2 px-2"
-          >
-            <AlertTriangle className="w-5 h-5 mb-1 text-orange-600" />
-            <span className="text-xs">Report</span>
-          </Button>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-col h-auto py-2 px-2"
-          >
-            <Phone className="w-5 h-5 mb-1 text-green-600" />
-            <span className="text-xs">Contact</span>
-          </Button>
-        </div>
+        {/* Report Button */}
+        <Button variant="outline" className="w-full">
+          <AlertTriangle className="w-4 h-4 mr-2 text-orange-600" />
+          Report
+        </Button>
 
         {/* End Job Button */}
         <Button

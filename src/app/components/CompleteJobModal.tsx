@@ -8,11 +8,18 @@ import {
   Zap,
   Clock,
   Info,
+  Plus,
 } from "lucide-react";
 import { AssignedJob } from "./AssignedJobCard";
 
 type PayoutMethod = "standard" | "instant";
 type Step = "confirm" | "payout" | "success";
+
+interface CustomInvoiceItem {
+  id: string;
+  label: string;
+  amount: string; // raw input value; parsed when totalling
+}
 
 interface CompleteJobModalProps {
   open: boolean;
@@ -42,16 +49,42 @@ export function CompleteJobModal({
   const [step, setStep] = useState<Step>("confirm");
   const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>("standard");
 
+  // Custom invoice charges
+  const [customItems, setCustomItems] = useState<CustomInvoiceItem[]>([]);
+
   const jobFee = parseFloat(job.assignedPay.replace(/[$,]/g, "")) || 500;
   const payoutFee =
     payoutMethod === "standard"
       ? STANDARD_PAYOUT_FEE
       : jobFee * INSTANT_PAYOUT_RATE;
-  const totalAmount = jobFee + payoutFee + PAYMENT_PROCESSING_FEE + PLATFORM_FEE;
+  const customItemsTotal = customItems.reduce(
+    (sum, item) => sum + (parseFloat(item.amount) || 0),
+    0,
+  );
+  const totalAmount =
+    jobFee + payoutFee + PAYMENT_PROCESSING_FEE + PLATFORM_FEE + customItemsTotal;
+
+  const addCustomItem = () => {
+    setCustomItems([
+      ...customItems,
+      { id: `ITEM-${Date.now()}`, label: "", amount: "" },
+    ]);
+  };
+
+  const updateCustomItem = (id: string, patch: Partial<CustomInvoiceItem>) => {
+    setCustomItems(
+      customItems.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
+  };
+
+  const removeCustomItem = (id: string) => {
+    setCustomItems(customItems.filter((item) => item.id !== id));
+  };
 
   const reset = () => {
     setStep("confirm");
     setPayoutMethod("standard");
+    setCustomItems([]);
   };
 
   const handleClose = () => {
@@ -92,52 +125,31 @@ export function CompleteJobModal({
 
         {/* ── STEP 1: Confirm ── */}
         {step === "confirm" && (
-          <div className="px-5 pb-8 pt-2 space-y-5">
-            {/* Icon + Title */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-gray-900">Complete Job?</h2>
-                  <p className="text-[11px] text-gray-400 mt-0.5 font-mono">{job.id}</p>
-                </div>
+          <div className="px-5 pb-8 pt-2">
+            {/* Icon + Title + Message */}
+            <div className="flex flex-col items-center text-center pt-3">
+              <div className="w-14 h-14 rounded-full bg-[#f89823]/15 flex items-center justify-center mb-3">
+                <CheckCircle2 className="w-7 h-7 text-[#f89823]" />
               </div>
-              <button
-                onClick={handleClose}
-                className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center"
-              >
-                <X className="w-3.5 h-3.5 text-gray-500" />
-              </button>
-            </div>
-
-            {/* Message */}
-            <p className="text-sm text-gray-600 leading-relaxed">
-              Are you sure you have successfully completed this job? Once confirmed,
-              you'll proceed to review your payout details before submitting.
-            </p>
-
-            {/* Job pill */}
-            <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-              <p className="text-xs text-gray-500 mb-0.5">Job</p>
-              <p className="text-sm font-semibold text-gray-900 truncate">{job.jobTitle}</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                {job.origin} → {job.destination}
+              <h2 className="text-lg font-bold text-gray-900">Complete Job?</h2>
+              <p className="text-sm text-gray-600 leading-relaxed mt-2 max-w-[300px]">
+                Are you sure you have successfully completed this job? Once
+                confirmed, you'll proceed to review your payout details before
+                submitting.
               </p>
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3 pt-1">
+            <div className="flex gap-3 mt-6">
               <button
                 onClick={handleClose}
-                className="flex-1 h-12 rounded-[6px] border border-gray-200 text-sm font-semibold text-gray-700 bg-white active:bg-gray-50 transition-colors"
+                className="flex-1 h-12 rounded-[6px] border border-gray-200 text-sm font-semibold text-gray-700 bg-white cursor-pointer active:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => setStep("payout")}
-                className="flex-1 h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-2 active:bg-[#e08820] transition-colors"
+                className="flex-1 h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer active:bg-[#e08820] transition-colors"
               >
                 Continue <ChevronRight className="w-4 h-4" />
               </button>
@@ -293,6 +305,57 @@ export function CompleteJobModal({
                     <span className="text-sm text-gray-500">Overwize Platform Fee</span>
                     <span className="text-sm text-gray-700">${fmt(PLATFORM_FEE)}</span>
                   </div>
+
+                  {/* Custom charges */}
+                  {customItems.map((item) => (
+                    <div key={item.id} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={item.label}
+                        onChange={(e) =>
+                          updateCustomItem(item.id, { label: e.target.value })
+                        }
+                        placeholder="Charge description"
+                        aria-label="Charge description"
+                        className="flex-1 min-w-0 h-9 text-sm text-gray-700 placeholder:text-gray-400 bg-transparent focus:outline-none"
+                      />
+                      <div className="flex items-center gap-1.5 h-9 rounded-lg border border-gray-200 bg-gray-50 px-2.5 shrink-0 focus-within:border-[#f89823] transition-colors">
+                        <span className="text-sm text-gray-500">$</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={item.amount}
+                          onChange={(e) =>
+                            updateCustomItem(item.id, {
+                              amount: e.target.value.replace(/[^0-9.]/g, ""),
+                            })
+                          }
+                          placeholder="0.00"
+                          aria-label="Charge amount"
+                          className="w-14 text-right text-sm font-semibold text-gray-900 placeholder:font-normal placeholder:text-gray-400 bg-transparent focus:outline-none"
+                        />
+                        <span className="text-[10px] font-semibold text-gray-400">CAD</span>
+                      </div>
+                      <button
+                        onClick={() => removeCustomItem(item.id)}
+                        aria-label="Remove charge"
+                        className="w-7 h-7 -mr-1 rounded-full flex items-center justify-center text-gray-400 shrink-0 cursor-pointer active:bg-gray-100 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Add custom charge */}
+                  <button
+                    onClick={addCustomItem}
+                    className="flex items-center gap-2 py-1 text-sm font-semibold text-[#f89823] cursor-pointer active:opacity-70 transition-opacity"
+                  >
+                    <span className="w-5 h-5 rounded-full bg-[#f89823]/15 flex items-center justify-center shrink-0">
+                      <Plus className="w-3 h-3" strokeWidth={2.5} />
+                    </span>
+                    Add custom charge
+                  </button>
                 </div>
                 <div className="px-4 py-3 bg-green-50 border-t border-green-100 flex justify-between items-center">
                   <span className="text-sm font-bold text-gray-900">Total Amount</span>
