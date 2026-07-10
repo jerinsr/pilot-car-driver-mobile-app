@@ -379,10 +379,6 @@ export function CompleteJobModal({
 
             {/* Sticky CTA */}
             <div className="shrink-0 px-5 pb-8 pt-3 border-t border-gray-100 bg-white">
-              <div className="flex items-baseline justify-between mb-3">
-                <span className="text-xs text-gray-500">You'll Receive</span>
-                <span className="text-xl font-bold text-green-600">${fmt(totalAmount)}</span>
-              </div>
               <button
                 onClick={() => setStep("success")}
                 className="w-full h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer active:bg-[#e08820] transition-colors"
