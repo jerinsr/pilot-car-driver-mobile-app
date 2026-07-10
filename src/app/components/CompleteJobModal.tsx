@@ -209,14 +209,16 @@ export function CompleteJobModal({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900">Standard Payout</span>
-                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
-                          Default
+                        <span className="text-sm font-semibold text-gray-900">Standard Deposit</span>
+                        <span className="text-[10px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
+                          Recommended
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">ACH (Canada) / EFT (USA)</p>
-                      <p className="text-xs text-gray-400">
-                        ${fmt(STANDARD_PAYOUT_FEE)} processing fee
+                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                        Deposited to your linked bank account within 1–3 business days.
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Processing fee: ${fmt(STANDARD_PAYOUT_FEE)}
                       </p>
                     </div>
                     <div
@@ -258,14 +260,13 @@ export function CompleteJobModal({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900">Instant Payout</span>
-                        <span className="text-[10px] font-semibold text-[#f89823] bg-[#f89823]/10 px-2 py-0.5 rounded-full uppercase tracking-wide">
-                          Fastest
-                        </span>
+                        <span className="text-sm font-semibold text-gray-900">Express Deposit</span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">Receive your payment instantly</p>
-                      <p className="text-xs text-gray-400">
-                        ${fmt(jobFee * INSTANT_PAYOUT_RATE)} processing fee (1.5%)
+                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                        Receive your payment with faster processing.
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Processing fee: 1.5% (${fmt(jobFee * INSTANT_PAYOUT_RATE)})
                       </p>
                     </div>
                     <div
@@ -283,10 +284,22 @@ export function CompleteJobModal({
                 </button>
               </div>
 
-              {/* Invoice Summary */}
+              {/* Info card — only shown for Express Deposit */}
+              {payoutMethod === "instant" && (
+                <div className="flex gap-2.5 rounded-xl bg-blue-50 border border-blue-100 px-3.5 py-3 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    Your payment will be processed faster than the standard payout. A
+                    1.5% processing fee will be deducted from your payout before it is
+                    sent.
+                  </p>
+                </div>
+              )}
+
+              {/* Payout Summary */}
               <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Invoice Summary</p>
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Payout Summary</p>
                 </div>
                 <div className="px-4 py-3 space-y-2.5">
                   <div className="flex justify-between items-center">
@@ -358,27 +371,16 @@ export function CompleteJobModal({
                   </button>
                 </div>
                 <div className="px-4 py-3 bg-green-50 border-t border-green-100 flex justify-between items-center">
-                  <span className="text-sm font-bold text-gray-900">Total Amount</span>
+                  <span className="text-sm font-bold text-gray-900">You'll Receive</span>
                   <span className="text-lg font-bold text-green-600">${fmt(totalAmount)}</span>
                 </div>
               </div>
-
-              {/* Info notice */}
-              {payoutMethod === "instant" && (
-                <div className="flex gap-2.5 rounded-xl bg-blue-50 border border-blue-200 px-3 py-3">
-                  <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-blue-700 leading-relaxed">
-                    Instant Payout includes a 1.5% processing fee. Funds will be sent
-                    instantly once the Truck Driver has paid the invoice.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Sticky CTA */}
             <div className="shrink-0 px-5 pb-8 pt-3 border-t border-gray-100 bg-white">
               <div className="flex items-baseline justify-between mb-3">
-                <span className="text-xs text-gray-500">Total Amount</span>
+                <span className="text-xs text-gray-500">You'll Receive</span>
                 <span className="text-xl font-bold text-green-600">${fmt(totalAmount)}</span>
               </div>
               <button
@@ -416,18 +418,18 @@ export function CompleteJobModal({
                   <span className="text-sm font-semibold text-gray-900 flex items-center gap-1.5">
                     {payoutMethod === "instant" ? (
                       <>
-                        <Zap className="w-3.5 h-3.5 text-[#f89823]" /> Instant
+                        <Zap className="w-3.5 h-3.5 text-[#f89823]" /> Express Deposit
                       </>
                     ) : (
                       <>
-                        <Clock className="w-3.5 h-3.5 text-gray-500" /> Standard
+                        <Clock className="w-3.5 h-3.5 text-gray-500" /> Standard Deposit
                       </>
                     )}
                   </span>
                 </div>
                 <div className="h-px bg-gray-200" />
                 <div className="flex justify-between items-center py-0.5">
-                  <span className="text-sm font-bold text-gray-900">Total Amount</span>
+                  <span className="text-sm font-bold text-gray-900">You'll Receive</span>
                   <span className="text-lg font-bold text-green-600">${fmt(totalAmount)}</span>
                 </div>
               </div>
