@@ -126,30 +126,43 @@ export function CompleteJobModal({
         {/* ── STEP 1: Confirm ── */}
         {step === "confirm" && (
           <div className="px-5 pb-8 pt-2">
-            {/* Icon + Title + Message */}
-            <div className="flex flex-col items-center text-center pt-3">
-              <div className="w-14 h-14 rounded-full bg-[#f89823]/15 flex items-center justify-center mb-3">
-                <CheckCircle2 className="w-7 h-7 text-[#f89823]" />
+            {/* Hero */}
+            <div className="flex flex-col items-center text-center pt-4">
+              <div className="relative mb-5">
+                <span className="absolute inset-0 -m-3 rounded-full bg-[#f89823]/5" />
+                <span className="absolute inset-0 -m-1.5 rounded-full bg-[#f89823]/10" />
+                <div className="relative w-16 h-16 rounded-full bg-[#f89823] flex items-center justify-center shadow-lg shadow-[#f89823]/30">
+                  <CheckCircle2 className="w-8 h-8 text-white" strokeWidth={2.2} />
+                </div>
               </div>
-              <h2 className="text-lg font-bold text-gray-900">Complete Job?</h2>
-              <p className="text-sm text-gray-600 leading-relaxed mt-2 max-w-[300px]">
-                Are you sure you have successfully completed this job? Once
-                confirmed, you'll proceed to review your payout details before
-                submitting.
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">Complete Job?</h2>
+              <p className="text-sm text-gray-500 leading-relaxed mt-1.5 max-w-[280px]">
+                Confirm you've successfully completed this job. You'll review your
+                payout details next.
               </p>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 mt-6">
+            {/* Payment note */}
+            <div className="flex items-center gap-3 rounded-2xl bg-blue-50 px-4 py-3.5 mt-6">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                <Info className="w-4 h-4 text-blue-600" />
+              </div>
+              <p className="text-xs text-blue-800 leading-relaxed">
+                Funds will be sent only once the Truck Driver has paid the invoice.
+              </p>
+            </div>
+
+            {/* Actions — two columns */}
+            <div className="grid grid-cols-2 gap-3 mt-6">
               <button
                 onClick={handleClose}
-                className="flex-1 h-12 rounded-[6px] border border-gray-200 text-sm font-semibold text-gray-700 bg-white cursor-pointer active:bg-gray-50 transition-colors"
+                className="h-12 rounded-[4px] bg-gray-100 text-sm font-semibold text-gray-700 cursor-pointer active:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => setStep("payout")}
-                className="flex-1 h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer active:bg-[#e08820] transition-colors"
+                className="h-12 rounded-[4px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer active:bg-[#e08820] transition-colors"
               >
                 Continue <ChevronRight className="w-4 h-4" />
               </button>
@@ -284,23 +297,11 @@ export function CompleteJobModal({
                 </button>
               </div>
 
-              {/* Info card — only shown for Express Deposit */}
-              {payoutMethod === "instant" && (
-                <div className="flex gap-2.5 rounded-xl bg-blue-50 border border-blue-100 px-3.5 py-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-blue-700 leading-relaxed">
-                    Your payment will be processed faster than the standard payout. A
-                    1.5% processing fee will be deducted from your payout before it is
-                    sent.
-                  </p>
-                </div>
-              )}
-
               {/* Payout Summary */}
               <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Payout Summary</p>
-                </div>
+                </div>{/*  */}
                 <div className="px-4 py-3 space-y-2.5">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-700">Total Job Fee</span>
