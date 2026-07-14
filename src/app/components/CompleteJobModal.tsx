@@ -142,16 +142,6 @@ export function CompleteJobModal({
               </p>
             </div>
 
-            {/* Payment note */}
-            <div className="flex items-center gap-3 rounded-2xl bg-blue-50 px-4 py-3.5 mt-6">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                <Info className="w-4 h-4 text-blue-600" />
-              </div>
-              <p className="text-xs text-blue-800 leading-relaxed">
-                Funds will be sent only once the Truck Driver has paid the invoice.
-              </p>
-            </div>
-
             {/* Actions — two columns */}
             <div className="grid grid-cols-2 gap-3 mt-6">
               <button
@@ -223,15 +213,9 @@ export function CompleteJobModal({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-gray-900">Standard Deposit</span>
-                        <span className="text-[10px] font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full uppercase tracking-wide">
-                          Recommended
-                        </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
                         Deposited to your linked bank account within 1–3 business days.
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Processing fee: ${fmt(STANDARD_PAYOUT_FEE)}
                       </p>
                     </div>
                     <div
@@ -278,9 +262,6 @@ export function CompleteJobModal({
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
                         Receive your payment with faster processing.
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        Processing fee: 1.5% (${fmt(jobFee * INSTANT_PAYOUT_RATE)})
-                      </p>
                     </div>
                     <div
                       className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center transition-colors ${
@@ -295,6 +276,16 @@ export function CompleteJobModal({
                     </div>
                   </div>
                 </button>
+
+                {/* Payment note */}
+                <div className="flex items-center gap-3 rounded-2xl bg-blue-50 px-4 py-3.5">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                    <Info className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <p className="text-xs text-blue-800 leading-relaxed">
+                    Funds will be sent only once the Truck Driver has paid the invoice.
+                  </p>
+                </div>
               </div>
 
               {/* Payout Summary */}
