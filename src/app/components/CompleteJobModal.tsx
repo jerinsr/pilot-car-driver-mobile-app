@@ -260,7 +260,7 @@ export function CompleteJobModal({
                         <span className="text-sm font-semibold text-gray-900">Express Deposit</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                        Receive your payment with faster processing.
+                        Faster payout with a 1.5% processing fee deducted.
                       </p>
                     </div>
                     <div
