@@ -215,7 +215,7 @@ export function CompleteJobModal({
                         <span className="text-sm font-semibold text-gray-900">Standard Deposit</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                        Deposited to your linked bank account within 1–3 business days.
+                        3–5 business days after payment.
                       </p>
                     </div>
                     <div
@@ -257,10 +257,10 @@ export function CompleteJobModal({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900">Express Deposit</span>
+                        <span className="text-sm font-semibold text-gray-900">Instant Deposit</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                        Faster payout with a 1.5% processing fee deducted.
+                        Within 30 minutes after payment (+1.5% fee)
                       </p>
                     </div>
                     <div
@@ -276,16 +276,6 @@ export function CompleteJobModal({
                     </div>
                   </div>
                 </button>
-
-                {/* Payment note */}
-                <div className="flex items-center gap-3 rounded-2xl bg-blue-50 px-4 py-3.5">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                    <Info className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <p className="text-xs text-blue-800 leading-relaxed">
-                    Funds will be sent only once the Truck Driver has paid the invoice.
-                  </p>
-                </div>
               </div>
 
               {/* Payout Summary */}
