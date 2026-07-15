@@ -3,22 +3,28 @@ import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import {
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   X,
   Zap,
   Clock,
   Info,
   Plus,
+  Moon,
+  Fuel,
+  Tag,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { AssignedJob } from "./AssignedJobCard";
 
 type PayoutMethod = "standard" | "instant";
-type Step = "confirm" | "payout" | "success";
+type Step = "confirm" | "charges" | "payout" | "success";
 
 interface CustomInvoiceItem {
   id: string;
   label: string;
   amount: string; // raw input value; parsed when totalling
+  category?: string; // matched category label, for the list icon
 }
 
 interface CompleteJobModalProps {
@@ -32,6 +38,16 @@ const PAYMENT_PROCESSING_FEE = 0.33;
 const PLATFORM_FEE = 40.0;
 const STANDARD_PAYOUT_FEE = 1.5;
 const INSTANT_PAYOUT_RATE = 0.015; // 1.5%
+
+const CHARGE_CATEGORIES: { label: string; icon: LucideIcon }[] = [
+  { label: "Waiting Charge", icon: Clock },
+  { label: "Layover Charge", icon: Moon },
+  { label: "Fuel Surcharge", icon: Fuel },
+  { label: "Other", icon: Tag },
+];
+
+const categoryIcon = (label?: string): LucideIcon =>
+  CHARGE_CATEGORIES.find((c) => c.label === label)?.icon ?? Tag;
 
 function fmt(n: number) {
   return n.toLocaleString("en-US", {
@@ -52,6 +68,11 @@ export function CompleteJobModal({
   // Custom invoice charges
   const [customItems, setCustomItems] = useState<CustomInvoiceItem[]>([]);
 
+  // Draft state for the "Additional Charges" add form
+  const [draftCategory, setDraftCategory] = useState("");
+  const [draftLabel, setDraftLabel] = useState("");
+  const [draftAmount, setDraftAmount] = useState("");
+
   const jobFee = parseFloat(job.assignedPay.replace(/[$,]/g, "")) || 500;
   const payoutFee =
     payoutMethod === "standard"
@@ -64,27 +85,47 @@ export function CompleteJobModal({
   const totalAmount =
     jobFee + payoutFee + PAYMENT_PROCESSING_FEE + PLATFORM_FEE + customItemsTotal;
 
-  const addCustomItem = () => {
-    setCustomItems([
-      ...customItems,
-      { id: `ITEM-${Date.now()}`, label: "", amount: "" },
-    ]);
-  };
-
-  const updateCustomItem = (id: string, patch: Partial<CustomInvoiceItem>) => {
-    setCustomItems(
-      customItems.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    );
-  };
-
   const removeCustomItem = (id: string) => {
     setCustomItems(customItems.filter((item) => item.id !== id));
+  };
+
+  const selectCategory = (label: string) => {
+    setDraftCategory(label);
+    // "Other" leaves the description blank for a custom entry
+    setDraftLabel(label === "Other" ? "" : label);
+  };
+
+  const draftValid = draftLabel.trim().length > 0 && parseFloat(draftAmount) > 0;
+
+  const commitDraft = () => {
+    if (!draftValid) return;
+    setCustomItems([
+      ...customItems,
+      {
+        id: `ITEM-${Date.now()}`,
+        label: draftLabel.trim(),
+        amount: draftAmount,
+        category: draftCategory || "Other",
+      },
+    ]);
+    setDraftCategory("");
+    setDraftLabel("");
+    setDraftAmount("");
+  };
+
+  // Continue to payout, folding in any valid-but-unsaved draft first
+  const commitAndContinue = () => {
+    commitDraft();
+    setStep("payout");
   };
 
   const reset = () => {
     setStep("confirm");
     setPayoutMethod("standard");
     setCustomItems([]);
+    setDraftCategory("");
+    setDraftLabel("");
+    setDraftAmount("");
   };
 
   const handleClose = () => {
@@ -107,15 +148,19 @@ export function CompleteJobModal({
       <SheetContent
         side="bottom"
         className="rounded-t-2xl p-0 flex flex-col gap-0 overflow-hidden [&>button]:hidden"
-        style={{ height: step === "payout" ? "92dvh" : "auto" }}
+        style={{
+          height: step === "payout" || step === "charges" ? "92dvh" : "auto",
+        }}
         aria-describedby={undefined}
       >
         <SheetTitle className="sr-only">
           {step === "confirm"
             ? "Complete Job Confirmation"
-            : step === "payout"
-              ? "Select Payout Method"
-              : "Job Completed"}
+            : step === "charges"
+              ? "Additional Charges"
+              : step === "payout"
+                ? "Select Payout Method"
+                : "Job Completed"}
         </SheetTitle>
 
         {/* Drag handle */}
@@ -137,8 +182,8 @@ export function CompleteJobModal({
               </div>
               <h2 className="text-xl font-bold text-gray-900 tracking-tight">Complete Job?</h2>
               <p className="text-sm text-gray-500 leading-relaxed mt-1.5 max-w-[280px]">
-                Confirm you've successfully completed this job. You'll review your
-                payout details next.
+                Confirm you've successfully completed this job. You'll add any
+                extra charges and review your payout next.
               </p>
             </div>
 
@@ -146,13 +191,13 @@ export function CompleteJobModal({
             <div className="grid grid-cols-2 gap-3 mt-6">
               <button
                 onClick={handleClose}
-                className="h-12 rounded-[4px] bg-gray-100 text-sm font-semibold text-gray-700 cursor-pointer active:bg-gray-200 transition-colors"
+                className="h-12 rounded-[6px] bg-gray-100 text-sm font-semibold text-gray-700 cursor-pointer active:bg-gray-200 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={() => setStep("payout")}
-                className="h-12 rounded-[4px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer active:bg-[#e08820] transition-colors"
+                onClick={() => setStep("charges")}
+                className="h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer active:bg-[#e08820] transition-colors"
               >
                 Continue <ChevronRight className="w-4 h-4" />
               </button>
@@ -160,17 +205,199 @@ export function CompleteJobModal({
           </div>
         )}
 
-        {/* ── STEP 2: Payout Method ── */}
-        {step === "payout" && (
+        {/* ── STEP 2: Additional Charges ── */}
+        {step === "charges" && (
           <>
             {/* Header */}
             <div className="px-5 pt-1 pb-4 shrink-0 border-b border-gray-100">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h2 className="text-base font-bold text-gray-900">Select Payout Method</h2>
+                  <h2 className="text-base font-bold text-gray-900">Additional Charges</h2>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    How would you like to receive your payment?
+                    Add any extra charges before reviewing your payout.
                   </p>
+                </div>
+                <button
+                  onClick={handleClose}
+                  aria-label="Close"
+                  className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 cursor-pointer active:bg-gray-200 transition-colors"
+                >
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto px-5 pt-4 space-y-6 pb-4">
+              {/* Added charges list */}
+              {customItems.length > 0 && (
+                <div className="space-y-2.5">
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-0.5">
+                    Added charges
+                  </p>
+                  {customItems.map((item) => {
+                    const Icon = categoryIcon(item.category);
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 rounded-[12px] border border-gray-200 bg-white p-3"
+                      >
+                        <span className="w-10 h-10 rounded-[12px] bg-[#fff7ed] flex items-center justify-center shrink-0">
+                          <Icon className="w-[18px] h-[18px] text-[#f89823]" />
+                        </span>
+                        <p className="flex-1 min-w-0 text-sm font-semibold text-gray-900 truncate">
+                          {item.label || "Additional charge"}
+                        </p>
+                        <span className="text-base font-bold text-gray-900 shrink-0">
+                          ${fmt(parseFloat(item.amount) || 0)}
+                        </span>
+                        <button
+                          onClick={() => removeCustomItem(item.id)}
+                          aria-label="Remove charge"
+                          className="w-9 h-9 -mr-1 rounded-full flex items-center justify-center text-gray-400 shrink-0 cursor-pointer active:bg-gray-100 transition-colors"
+                        >
+                          <X className="w-[18px] h-[18px]" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Add a charge */}
+              <div className="space-y-4">
+                <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-0.5">
+                  {customItems.length > 0 ? "Add another charge" : "Add a charge"}
+                </p>
+
+                {/* Category grid */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {CHARGE_CATEGORIES.map(({ label, icon: Icon }) => {
+                    const active = draftCategory === label;
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => selectCategory(label)}
+                        aria-pressed={active}
+                        className={`flex items-center gap-2.5 h-14 rounded-[12px] border-2 px-3 text-left transition-colors cursor-pointer ${
+                          active
+                            ? "border-[#f89823] bg-[#fff7ed]"
+                            : "border-gray-200 bg-white active:bg-gray-50"
+                        }`}
+                      >
+                        <span
+                          className={`w-9 h-9 rounded-[12px] flex items-center justify-center shrink-0 transition-colors ${
+                            active ? "bg-[#f89823]" : "bg-gray-100"
+                          }`}
+                        >
+                          <Icon
+                            className={`w-[18px] h-[18px] ${
+                              active ? "text-white" : "text-gray-500"
+                            }`}
+                          />
+                        </span>
+                        <span
+                          className={`text-sm font-semibold leading-tight ${
+                            active ? "text-gray-900" : "text-gray-700"
+                          }`}
+                        >
+                          {label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Description */}
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="charge-desc"
+                    className="block text-xs font-medium text-gray-500 px-0.5"
+                  >
+                    Description
+                  </label>
+                  <input
+                    id="charge-desc"
+                    type="text"
+                    value={draftLabel}
+                    onChange={(e) => {
+                      setDraftLabel(e.target.value);
+                      setDraftCategory("Other");
+                    }}
+                    placeholder="e.g. Detention time at pickup"
+                    className="w-full h-12 rounded-[12px] border-2 border-gray-200 px-4 text-base text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:border-[#f89823] transition-colors"
+                  />
+                </div>
+
+                {/* Amount */}
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="charge-amount"
+                    className="block text-xs font-medium text-gray-500 px-0.5"
+                  >
+                    Amount
+                  </label>
+                  <div className="flex items-center gap-2 h-16 rounded-[12px] border-2 border-gray-200 bg-white px-4 focus-within:border-[#f89823] transition-colors">
+                    <span className="text-2xl font-bold text-gray-400">$</span>
+                    <input
+                      id="charge-amount"
+                      type="text"
+                      inputMode="decimal"
+                      value={draftAmount}
+                      onChange={(e) =>
+                        setDraftAmount(e.target.value.replace(/[^0-9.]/g, ""))
+                      }
+                      placeholder="0.00"
+                      className="flex-1 min-w-0 text-2xl font-bold text-gray-900 placeholder:font-semibold placeholder:text-gray-300 bg-transparent focus:outline-none"
+                    />
+                    <span className="text-xs font-semibold text-gray-400">CAD</span>
+                  </div>
+                </div>
+
+                {/* Add charge */}
+                <button
+                  onClick={commitDraft}
+                  disabled={!draftValid}
+                  className="w-full h-12 rounded-[6px] border-2 border-dashed border-[#f89823] text-[#f89823] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer active:bg-[#fff7ed] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:active:bg-transparent"
+                >
+                  <Plus className="w-4 h-4" strokeWidth={2.5} /> Add charge
+                </button>
+              </div>
+            </div>
+
+            {/* Sticky CTA */}
+            <div className="shrink-0 px-5 pb-8 pt-3 border-t border-gray-100 bg-white">
+              <button
+                onClick={commitAndContinue}
+                className="w-full h-14 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-base font-bold flex items-center justify-center gap-2 cursor-pointer active:bg-[#e08820] transition-colors"
+              >
+                {customItems.length > 0 || draftValid ? "Continue" : "Skip"}
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── STEP 3: Payout Method ── */}
+        {step === "payout" && (
+          <>
+            {/* Header */}
+            <div className="px-5 pt-1 pb-4 shrink-0 border-b border-gray-100">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-2 min-w-0">
+                  <button
+                    onClick={() => setStep("charges")}
+                    aria-label="Back"
+                    className="w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center shrink-0 cursor-pointer active:bg-gray-100 transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-500" />
+                  </button>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-bold text-gray-900">Select Payout Method</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      How would you like to receive your payment?
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={handleClose}
@@ -192,7 +419,7 @@ export function CompleteJobModal({
                   role="radio"
                   aria-checked={payoutMethod === "standard"}
                   onClick={() => setPayoutMethod("standard")}
-                  className={`w-full text-left rounded-xl border-2 p-4 transition-colors cursor-pointer ${
+                  className={`w-full text-left rounded-[12px] border-2 p-4 transition-colors cursor-pointer ${
                     payoutMethod === "standard"
                       ? "border-[#f89823] bg-[#fff7ed]"
                       : "border-gray-200 bg-white active:bg-gray-50"
@@ -200,7 +427,7 @@ export function CompleteJobModal({
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      className={`w-10 h-10 rounded-[12px] flex items-center justify-center shrink-0 transition-colors ${
                         payoutMethod === "standard" ? "bg-[#f89823]" : "bg-gray-100"
                       }`}
                     >
@@ -237,7 +464,7 @@ export function CompleteJobModal({
                   role="radio"
                   aria-checked={payoutMethod === "instant"}
                   onClick={() => setPayoutMethod("instant")}
-                  className={`w-full text-left rounded-xl border-2 p-4 transition-colors cursor-pointer ${
+                  className={`w-full text-left rounded-[12px] border-2 p-4 transition-colors cursor-pointer ${
                     payoutMethod === "instant"
                       ? "border-[#f89823] bg-[#fff7ed]"
                       : "border-gray-200 bg-white active:bg-gray-50"
@@ -245,7 +472,7 @@ export function CompleteJobModal({
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      className={`w-10 h-10 rounded-[12px] flex items-center justify-center shrink-0 transition-colors ${
                         payoutMethod === "instant" ? "bg-[#f89823]" : "bg-gray-100"
                       }`}
                     >
@@ -279,7 +506,7 @@ export function CompleteJobModal({
               </div>
 
               {/* Payout Summary */}
-              <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <div className="rounded-[12px] border border-gray-200 bg-white overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Payout Summary</p>
                 </div>{/*  */}
@@ -289,68 +516,25 @@ export function CompleteJobModal({
                     <span className="text-sm font-semibold text-gray-900">${fmt(jobFee)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Payout Processing Fee</span>
-                    <span className="text-sm text-gray-700">${fmt(payoutFee)}</span>
+                    <span className="text-sm text-gray-500">Transaction Processing Fee</span>
+                    <span className="text-sm text-gray-700">${fmt(payoutFee + PAYMENT_PROCESSING_FEE)}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Payment Processing Fee</span>
-                    <span className="text-sm text-gray-700">${fmt(PAYMENT_PROCESSING_FEE)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Overwize Platform Fee</span>
+                    <span className="text-sm text-gray-500">Platform Fee</span>
                     <span className="text-sm text-gray-700">${fmt(PLATFORM_FEE)}</span>
                   </div>
 
-                  {/* Custom charges */}
+                  {/* Custom charges (added in the previous step) */}
                   {customItems.map((item) => (
-                    <div key={item.id} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={item.label}
-                        onChange={(e) =>
-                          updateCustomItem(item.id, { label: e.target.value })
-                        }
-                        placeholder="Charge description"
-                        aria-label="Charge description"
-                        className="flex-1 min-w-0 h-9 text-sm text-gray-700 placeholder:text-gray-400 bg-transparent focus:outline-none"
-                      />
-                      <div className="flex items-center gap-1.5 h-9 rounded-lg border border-gray-200 bg-gray-50 px-2.5 shrink-0 focus-within:border-[#f89823] transition-colors">
-                        <span className="text-sm text-gray-500">$</span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={item.amount}
-                          onChange={(e) =>
-                            updateCustomItem(item.id, {
-                              amount: e.target.value.replace(/[^0-9.]/g, ""),
-                            })
-                          }
-                          placeholder="0.00"
-                          aria-label="Charge amount"
-                          className="w-14 text-right text-sm font-semibold text-gray-900 placeholder:font-normal placeholder:text-gray-400 bg-transparent focus:outline-none"
-                        />
-                        <span className="text-[10px] font-semibold text-gray-400">CAD</span>
-                      </div>
-                      <button
-                        onClick={() => removeCustomItem(item.id)}
-                        aria-label="Remove charge"
-                        className="w-7 h-7 -mr-1 rounded-full flex items-center justify-center text-gray-400 shrink-0 cursor-pointer active:bg-gray-100 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                    <div key={item.id} className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500 truncate min-w-0 pr-3">
+                        {item.label || "Additional charge"}
+                      </span>
+                      <span className="text-sm text-gray-700 shrink-0">
+                        ${fmt(parseFloat(item.amount) || 0)}
+                      </span>
                     </div>
                   ))}
-
-                  {/* Add custom charge */}
-                  <button
-                    onClick={addCustomItem}
-                    className="flex items-center gap-2 py-1 text-sm font-semibold text-[#f89823] cursor-pointer active:opacity-70 transition-opacity"
-                  >
-                    <span className="w-5 h-5 rounded-full bg-[#f89823]/15 flex items-center justify-center shrink-0">
-                      <Plus className="w-3 h-3" strokeWidth={2.5} />
-                    </span>
-                    Add custom charge
-                  </button>
                 </div>
                 <div className="px-4 py-3 bg-green-50 border-t border-green-100 flex justify-between items-center">
                   <span className="text-sm font-bold text-gray-900">You'll Receive</span>
@@ -372,7 +556,7 @@ export function CompleteJobModal({
           </>
         )}
 
-        {/* ── STEP 3: Success ── */}
+        {/* ── STEP 4: Success ── */}
         {step === "success" && (
           <div className="px-5 pb-8 pt-4 space-y-5">
             {/* Icon + Title */}
@@ -389,7 +573,7 @@ export function CompleteJobModal({
             </div>
 
             {/* Payout summary */}
-            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+            <div className="rounded-[12px] border border-gray-200 bg-white overflow-hidden">
               <div className="px-4 py-3 space-y-2.5">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">Payout Method</span>
