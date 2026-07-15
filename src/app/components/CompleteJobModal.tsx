@@ -35,9 +35,10 @@ interface CompleteJobModalProps {
 }
 
 const PAYMENT_PROCESSING_FEE = 0.33;
-const PLATFORM_FEE = 40.0;
 const STANDARD_PAYOUT_FEE = 1.5;
 const INSTANT_PAYOUT_RATE = 0.015; // 1.5%
+const STANDARD_PLATFORM_RATE = 0.1; // 10%
+const INSTANT_PLATFORM_RATE = 0.15; // 15%
 
 const CHARGE_CATEGORIES: { label: string; icon: LucideIcon }[] = [
   { label: "Waiting Charge", icon: Clock },
@@ -82,8 +83,13 @@ export function CompleteJobModal({
     (sum, item) => sum + (parseFloat(item.amount) || 0),
     0,
   );
+  // Fees are deducted from the job fee (+ any additional charges)
+  const transactionFee = payoutFee + PAYMENT_PROCESSING_FEE;
+  const platformRate =
+    payoutMethod === "standard" ? STANDARD_PLATFORM_RATE : INSTANT_PLATFORM_RATE;
+  const platformFee = jobFee * platformRate;
   const totalAmount =
-    jobFee + payoutFee + PAYMENT_PROCESSING_FEE + PLATFORM_FEE + customItemsTotal;
+    jobFee + customItemsTotal - transactionFee - platformFee;
 
   const removeCustomItem = (id: string) => {
     setCustomItems(customItems.filter((item) => item.id !== id));
@@ -308,26 +314,25 @@ export function CompleteJobModal({
                   })}
                 </div>
 
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="charge-desc"
-                    className="block text-xs font-medium text-gray-500 px-0.5"
-                  >
-                    Description
-                  </label>
-                  <input
-                    id="charge-desc"
-                    type="text"
-                    value={draftLabel}
-                    onChange={(e) => {
-                      setDraftLabel(e.target.value);
-                      setDraftCategory("Other");
-                    }}
-                    placeholder="e.g. Detention time at pickup"
-                    className="w-full h-12 rounded-[12px] border-2 border-gray-200 px-4 text-base text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:border-[#f89823] transition-colors"
-                  />
-                </div>
+                {/* Description — only for a custom "Other" charge */}
+                {draftCategory === "Other" && (
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="charge-desc"
+                      className="block text-xs font-medium text-gray-500 px-0.5"
+                    >
+                      Description
+                    </label>
+                    <input
+                      id="charge-desc"
+                      type="text"
+                      value={draftLabel}
+                      onChange={(e) => setDraftLabel(e.target.value)}
+                      placeholder="e.g. Detention time at pickup"
+                      className="w-full h-12 rounded-[12px] border-2 border-gray-200 px-4 text-base text-gray-900 placeholder:text-gray-400 bg-white focus:outline-none focus:border-[#f89823] transition-colors"
+                    />
+                  </div>
+                )}
 
                 {/* Amount */}
                 <div className="space-y-1.5">
@@ -338,7 +343,6 @@ export function CompleteJobModal({
                     Amount
                   </label>
                   <div className="flex items-center gap-2 h-16 rounded-[12px] border-2 border-gray-200 bg-white px-4 focus-within:border-[#f89823] transition-colors">
-                    <span className="text-2xl font-bold text-gray-400">$</span>
                     <input
                       id="charge-amount"
                       type="text"
@@ -487,7 +491,7 @@ export function CompleteJobModal({
                         <span className="text-sm font-semibold text-gray-900">Instant Deposit</span>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                        Within 30 minutes after payment (+1.5% fee)
+                        Within 30 minutes after payment (+15%)
                       </p>
                     </div>
                     <div
@@ -515,29 +519,37 @@ export function CompleteJobModal({
                     <span className="text-sm text-gray-700">Total Job Fee</span>
                     <span className="text-sm font-semibold text-gray-900">${fmt(jobFee)}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Transaction Processing Fee</span>
-                    <span className="text-sm text-gray-700">${fmt(payoutFee + PAYMENT_PROCESSING_FEE)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Platform Fee</span>
-                    <span className="text-sm text-gray-700">${fmt(PLATFORM_FEE)}</span>
-                  </div>
 
-                  {/* Custom charges (added in the previous step) */}
+                  {/* Custom charges (added in the previous step) — add to the payout */}
                   {customItems.map((item) => (
                     <div key={item.id} className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500 truncate min-w-0 pr-3">
+                      <span className="text-sm text-gray-700 truncate min-w-0 pr-3">
                         {item.label || "Additional charge"}
                       </span>
-                      <span className="text-sm text-gray-700 shrink-0">
+                      <span className="text-sm font-semibold text-gray-900 shrink-0">
                         ${fmt(parseFloat(item.amount) || 0)}
                       </span>
                     </div>
                   ))}
+
+                  {/* Deductions */}
+                  <div className="h-px bg-gray-100 my-1" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">Transaction Processing Fee</span>
+                    <span className="text-sm text-gray-500">−${fmt(transactionFee)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-500">
+                      Platform Fee{" "}
+                      <span className="text-gray-400">
+                        ({payoutMethod === "standard" ? "10%" : "15%"})
+                      </span>
+                    </span>
+                    <span className="text-sm text-gray-500">−${fmt(platformFee)}</span>
+                  </div>
                 </div>
                 <div className="px-4 py-3 bg-green-50 border-t border-green-100 flex justify-between items-center">
-                  <span className="text-sm font-bold text-gray-900">You'll Receive</span>
+                  <span className="text-sm font-bold text-gray-900">Net Payout</span>
                   <span className="text-lg font-bold text-green-600">${fmt(totalAmount)}</span>
                 </div>
               </div>
@@ -591,7 +603,7 @@ export function CompleteJobModal({
                 </div>
                 <div className="h-px bg-gray-200" />
                 <div className="flex justify-between items-center py-0.5">
-                  <span className="text-sm font-bold text-gray-900">You'll Receive</span>
+                  <span className="text-sm font-bold text-gray-900">Net Payout</span>
                   <span className="text-lg font-bold text-green-600">${fmt(totalAmount)}</span>
                 </div>
               </div>
