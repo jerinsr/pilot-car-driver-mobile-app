@@ -1,16 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import {
-  AlertCircle,
-  Calendar,
   Check,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Clock3,
-  Flag,
-  MapPin,
-  User,
   X,
   Zap,
   Clock,
@@ -24,23 +18,7 @@ import type { LucideIcon } from "lucide-react";
 import { AssignedJob } from "./AssignedJobCard";
 
 type PayoutMethod = "standard" | "instant";
-type Step = "confirm" | "review" | "charges" | "success";
-type ReminderPhase = "normal" | "reminder" | "final" | "expired";
-
-// Invoice Generation Window (Day 1 policy — see invoice workflow spec)
-const INVOICE_WINDOW_SECONDS = 4 * 60 * 60; // 4 hours to submit
-const REMINDER_THRESHOLD_SECONDS = INVOICE_WINDOW_SECONDS / 2; // midway reminder (2h left)
-const FINAL_REMINDER_THRESHOLD_SECONDS = 30 * 60; // final reminder (30m left)
-
-function formatCountdown(totalSeconds: number) {
-  const s = Math.max(0, totalSeconds);
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${sec}s`;
-  return `${sec}s`;
-}
+type Step = "confirm" | "charges" | "payout" | "success";
 
 interface CustomInvoiceItem {
   id: string;
@@ -96,37 +74,6 @@ export function CompleteJobModal({
   const [draftLabel, setDraftLabel] = useState("");
   const [draftAmount, setDraftAmount] = useState("");
 
-  // Invoice Generation Window — starts once the job is marked complete
-  const [completedAt, setCompletedAt] = useState<Date | null>(null);
-  const [remainingSeconds, setRemainingSeconds] = useState(INVOICE_WINDOW_SECONDS);
-  const [autoSubmitted, setAutoSubmitted] = useState(false);
-
-  useEffect(() => {
-    if (!open || (step !== "review" && step !== "charges")) return;
-    if (remainingSeconds <= 0) return;
-    const interval = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          setAutoSubmitted(true);
-          setStep("success");
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [open, step]);
-
-  const reminderPhase: ReminderPhase =
-    remainingSeconds <= 0
-      ? "expired"
-      : remainingSeconds <= FINAL_REMINDER_THRESHOLD_SECONDS
-        ? "final"
-        : remainingSeconds <= REMINDER_THRESHOLD_SECONDS
-          ? "reminder"
-          : "normal";
-
   const jobFee = parseFloat(job.assignedPay.replace(/[$,]/g, "")) || 500;
   const payoutFee =
     payoutMethod === "standard"
@@ -172,10 +119,10 @@ export function CompleteJobModal({
     setDraftAmount("");
   };
 
-  // Save charges and return to the invoice review, folding in any valid-but-unsaved draft first
+  // Continue to payout, folding in any valid-but-unsaved draft first
   const commitAndContinue = () => {
     commitDraft();
-    setStep("review");
+    setStep("payout");
   };
 
   const reset = () => {
@@ -185,9 +132,6 @@ export function CompleteJobModal({
     setDraftCategory("");
     setDraftLabel("");
     setDraftAmount("");
-    setCompletedAt(null);
-    setRemainingSeconds(INVOICE_WINDOW_SECONDS);
-    setAutoSubmitted(false);
   };
 
   const handleClose = () => {
@@ -211,20 +155,18 @@ export function CompleteJobModal({
         side="bottom"
         className="rounded-t-2xl p-0 flex flex-col gap-0 overflow-hidden [&>button]:hidden"
         style={{
-          height: step === "review" || step === "charges" ? "92dvh" : "auto",
+          height: step === "payout" || step === "charges" ? "92dvh" : "auto",
         }}
         aria-describedby={undefined}
       >
         <SheetTitle className="sr-only">
           {step === "confirm"
             ? "Complete Job Confirmation"
-            : step === "review"
-              ? "Review Invoice"
-              : step === "charges"
-                ? "Edit Invoice"
-                : autoSubmitted
-                  ? "Invoice Automatically Submitted"
-                  : "Invoice Submitted"}
+            : step === "charges"
+              ? "Additional Charges"
+              : step === "payout"
+                ? "Select Payout Method"
+                : "Job Completed"}
         </SheetTitle>
 
         {/* Drag handle */}
@@ -246,8 +188,8 @@ export function CompleteJobModal({
               </div>
               <h2 className="text-xl font-bold text-gray-900 tracking-tight">Complete Job?</h2>
               <p className="text-sm text-gray-500 leading-relaxed mt-1.5 max-w-[280px]">
-                Are you sure you want to complete this job? Once confirmed, your
-                4-hour invoice submission window will begin.
+                Confirm you've successfully completed this job. You'll add any
+                extra charges and review your payout next.
               </p>
             </div>
 
@@ -260,13 +202,10 @@ export function CompleteJobModal({
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setCompletedAt(new Date());
-                  setStep("review");
-                }}
+                onClick={() => setStep("charges")}
                 className="h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer active:bg-[#e08820] transition-colors"
               >
-                Complete Job <ChevronRight className="w-4 h-4" />
+                Continue <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -278,20 +217,11 @@ export function CompleteJobModal({
             {/* Header */}
             <div className="px-5 pt-1 pb-4 shrink-0 border-b border-gray-100">
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-2 min-w-0">
-                  <button
-                    onClick={() => setStep("review")}
-                    aria-label="Back"
-                    className="w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center shrink-0 cursor-pointer active:bg-gray-100 transition-colors"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-gray-500" />
-                  </button>
-                  <div className="min-w-0">
-                    <h2 className="text-base font-bold text-gray-900">Edit Invoice</h2>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Add any extra charges to this invoice.
-                    </p>
-                  </div>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-gray-900">Additional Charges</h2>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Add any extra charges before reviewing your payout.
+                  </p>
                 </div>
                 <button
                   onClick={handleClose}
@@ -445,22 +375,33 @@ export function CompleteJobModal({
                 onClick={commitAndContinue}
                 className="w-full h-14 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-base font-bold flex items-center justify-center gap-2 cursor-pointer active:bg-[#e08820] transition-colors"
               >
-                {customItems.length > 0 || draftValid ? "Save & Return to Invoice" : "Back to Invoice"}
+                {customItems.length > 0 || draftValid ? "Continue" : "Skip"}
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </>
         )}
 
-        {/* ── STEP 3: Review Invoice ── */}
-        {step === "review" && (
+        {/* ── STEP 3: Payout Method ── */}
+        {step === "payout" && (
           <>
             {/* Header */}
             <div className="px-5 pt-1 pb-4 shrink-0 border-b border-gray-100">
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="text-base font-bold text-gray-900">Review Invoice</h2>
-                  <p className="text-xs text-gray-500 mt-0.5 font-mono">{job.id}</p>
+                <div className="flex items-start gap-2 min-w-0">
+                  <button
+                    onClick={() => setStep("charges")}
+                    aria-label="Back"
+                    className="w-8 h-8 -ml-1.5 rounded-full flex items-center justify-center shrink-0 cursor-pointer active:bg-gray-100 transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-500" />
+                  </button>
+                  <div className="min-w-0">
+                    <h2 className="text-base font-bold text-gray-900">Select Payout Method</h2>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      How would you like to receive your payment?
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={handleClose}
@@ -474,206 +415,6 @@ export function CompleteJobModal({
 
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto px-5 pt-4 space-y-5 pb-4">
-
-              {/* Invoice window / reminder banner */}
-              <div
-                className={`rounded-[12px] border p-3.5 flex items-start gap-2.5 ${
-                  reminderPhase === "final"
-                    ? "border-red-200 bg-red-50"
-                    : reminderPhase === "reminder"
-                      ? "border-amber-200 bg-amber-50"
-                      : "border-blue-200 bg-blue-50"
-                }`}
-              >
-                {reminderPhase === "final" || reminderPhase === "reminder" ? (
-                  <AlertCircle
-                    className={`w-4 h-4 mt-0.5 shrink-0 ${
-                      reminderPhase === "final" ? "text-red-600" : "text-amber-600"
-                    }`}
-                  />
-                ) : (
-                  <Clock3 className="w-4 h-4 mt-0.5 shrink-0 text-blue-600" />
-                )}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p
-                      className={`text-xs font-bold ${
-                        reminderPhase === "final"
-                          ? "text-red-700"
-                          : reminderPhase === "reminder"
-                            ? "text-amber-700"
-                            : "text-blue-700"
-                      }`}
-                    >
-                      {reminderPhase === "final"
-                        ? "Final Reminder"
-                        : reminderPhase === "reminder"
-                          ? "Invoice Pending"
-                          : "Invoice Window Open"}
-                    </p>
-                    <span
-                      className={`text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded ${
-                        reminderPhase === "final"
-                          ? "bg-red-100 text-red-700"
-                          : reminderPhase === "reminder"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {formatCountdown(remainingSeconds)} left
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">
-                    {reminderPhase === "final"
-                      ? "Invoice window expires soon. If no action is taken, Overwize will auto-generate and submit your invoice."
-                      : reminderPhase === "reminder"
-                        ? "Please submit your invoice before the timer expires. Otherwise, Overwize will automatically generate and submit it based on your recorded trip details."
-                        : "Please review and submit your invoice before the timer expires. If no invoice is submitted, Overwize will automatically generate one using your recorded trip details."}
-                  </p>
-                </div>
-              </div>
-
-              {/* Job Details */}
-              <div className="rounded-[12px] border border-gray-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Job Details</p>
-                </div>
-                <div className="px-4 py-3 space-y-2.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Job</span>
-                    <span className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{job.jobTitle}</span>
-                  </div>
-                  {job.driverName && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500 flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5" /> Truck Driver
-                      </span>
-                      <span className="text-sm font-semibold text-gray-900">{job.driverName}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500 flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5" /> Completed
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900">
-                      {(completedAt ?? new Date()).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Route Information */}
-              <div className="rounded-[12px] border border-gray-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Route Information</p>
-                </div>
-                <div className="px-4 py-3 space-y-2.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500 flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-green-600" /> Origin
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{job.origin}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500 flex items-center gap-1.5">
-                      <Flag className="w-3.5 h-3.5 text-red-600" /> Destination
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 truncate max-w-[200px]">{job.destination}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Distance</span>
-                    <span className="text-sm font-semibold text-gray-900">{job.distance}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Accepted Bid / Pricing Model / Currency */}
-              <div className="rounded-[12px] border border-gray-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Accepted Bid</p>
-                </div>
-                <div className="px-4 py-3 space-y-2.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Pricing Model</span>
-                    <span className="text-sm font-semibold text-gray-900 capitalize">
-                      {job.rateType === "per-mile" ? "Per Mile" : job.rateType === "hourly" ? "Hourly" : "Flat Rate"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Accepted Amount</span>
-                    <span className="text-sm font-semibold text-gray-900">${fmt(jobFee)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">Currency</span>
-                    <span className="text-sm font-semibold text-gray-900">CAD</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Layover Configuration */}
-              <div className="rounded-[12px] border border-gray-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Layover Configuration</p>
-                </div>
-                <div className="px-4 py-3">
-                  {customItems.filter((item) => item.category === "Layover Charge").length > 0 ? (
-                    <div className="space-y-2.5">
-                      {customItems
-                        .filter((item) => item.category === "Layover Charge")
-                        .map((item) => (
-                          <div key={item.id} className="flex justify-between items-center">
-                            <span className="text-sm text-gray-700 truncate min-w-0 pr-3">{item.label}</span>
-                            <span className="text-sm font-semibold text-gray-900 shrink-0">
-                              ${fmt(parseFloat(item.amount) || 0)}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No layover charges for this trip.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Additional Charges */}
-              <div className="rounded-[12px] border border-gray-200 bg-white overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Additional Charges</p>
-                </div>
-                <div className="px-4 py-3 space-y-3">
-                  {customItems.length > 0 ? (
-                    <div className="space-y-2.5">
-                      {customItems.map((item) => {
-                        const Icon = categoryIcon(item.category);
-                        return (
-                          <div key={item.id} className="flex items-center gap-3">
-                            <span className="w-8 h-8 rounded-[10px] bg-[#fff7ed] flex items-center justify-center shrink-0">
-                              <Icon className="w-4 h-4 text-[#f89823]" />
-                            </span>
-                            <span className="flex-1 min-w-0 text-sm text-gray-700 truncate">{item.label}</span>
-                            <span className="text-sm font-semibold text-gray-900 shrink-0">
-                              ${fmt(parseFloat(item.amount) || 0)}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-500">No additional charges added.</p>
-                  )}
-                  <button
-                    onClick={() => setStep("charges")}
-                    className="w-full h-11 rounded-[6px] border-2 border-dashed border-[#f89823] text-[#f89823] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer active:bg-[#fff7ed] transition-colors"
-                  >
-                    <Plus className="w-4 h-4" strokeWidth={2.5} /> Edit Invoice
-                  </button>
-                </div>
-              </div>
 
               {/* Payout Options */}
               <div role="radiogroup" aria-label="Payout method" className="space-y-2.5">
@@ -768,10 +509,10 @@ export function CompleteJobModal({
                 </button>
               </div>
 
-              {/* Platform Fee / Transaction Fee Configuration */}
+              {/* Payout Summary */}
               <div className="rounded-[12px] border border-gray-200 bg-white overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Invoice Summary</p>
+                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Payout Summary</p>
                 </div>{/*  */}
                 <div className="px-4 py-3 space-y-2.5">
                   <div className="flex justify-between items-center">
@@ -820,7 +561,7 @@ export function CompleteJobModal({
                 onClick={() => setStep("success")}
                 className="w-full h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-2 cursor-pointer active:bg-[#e08820] transition-colors"
               >
-                Submit Invoice
+                Confirm & Complete Job
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -835,18 +576,12 @@ export function CompleteJobModal({
               <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mb-3">
                 <CheckCircle2 className="w-7 h-7 text-green-600" />
               </div>
-              <h2 className="text-lg font-bold text-gray-900">
-                {autoSubmitted ? "Invoice Automatically Submitted" : "Invoice Submitted"}
-              </h2>
+              <h2 className="text-lg font-bold text-gray-900">Job Completed!</h2>
               <p className="text-[11px] text-gray-400 mt-0.5 font-mono">{job.id}</p>
               <p className="text-sm text-gray-600 leading-relaxed mt-2 max-w-[280px]">
-                {autoSubmitted
-                  ? "Invoice window has expired. Your invoice has been automatically generated and submitted."
-                  : "Your invoice has been submitted successfully. The Truck Driver has been notified to review the invoice."}
+                Your job has been marked as complete. The invoice will be sent to
+                the Truck Driver for payment.
               </p>
-              <span className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-semibold text-blue-700">
-                Pending Truck Driver Review
-              </span>
             </div>
 
             {/* Payout summary */}
