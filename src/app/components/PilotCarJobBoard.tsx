@@ -307,6 +307,7 @@ export default function PilotCarJobBoard({
   initialViewMode = "assigned",
   onJobStarted,
   onProfileClick,
+  onNotificationClick,
 }: {
   activeTimer?: TimerState | null;
   onStartTimer?: (timer: TimerState) => void;
@@ -315,6 +316,7 @@ export default function PilotCarJobBoard({
   initialViewMode?: "assigned" | "marketplace";
   onJobStarted?: (job: any) => void;
   onProfileClick?: () => void;
+  onNotificationClick?: () => void;
 }) {
   const [viewMode, setViewMode] = useState<"assigned" | "marketplace">(initialViewMode);
   const [activeTab, setActiveTab] = useState("available");
@@ -563,6 +565,7 @@ export default function PilotCarJobBoard({
           onBack={showSurvey ? handleSurveyBack : undefined}
           notificationCount={showSurvey ? undefined : 2}
           showNotifications={!showSurvey}
+          onNotificationClick={onNotificationClick}
           onProfileClick={onProfileClick}
           rightElement={
             showSurvey ? (

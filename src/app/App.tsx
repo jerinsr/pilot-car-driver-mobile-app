@@ -174,18 +174,19 @@ export default function App() {
         )}
         
         {currentScreen === 'browse-jobs' && (
-          <PilotCarJobBoard 
+          <PilotCarJobBoard
             activeTimer={activeTimer}
             onStartTimer={setActiveTimer}
             onStopTimer={handleStopTimer}
             initialViewMode="marketplace"
             onJobStarted={handleJobStarted}
             onProfileClick={() => setCurrentScreen('profile')}
+            onNotificationClick={() => setCurrentScreen('notifications')}
           />
         )}
-        
+
         {currentScreen === 'my-jobs' && (
-          <PilotCarJobBoard 
+          <PilotCarJobBoard
             activeTimer={activeTimer}
             onStartTimer={setActiveTimer}
             onStopTimer={handleStopTimer}
@@ -193,6 +194,7 @@ export default function App() {
             onJobStarted={handleJobStarted}
             initialJobId={selectedPermit?.openJobId || "PC-010"}
             onProfileClick={() => setCurrentScreen('profile')}
+            onNotificationClick={() => setCurrentScreen('notifications')}
           />
         )}
         

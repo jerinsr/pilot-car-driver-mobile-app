@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "./ui/sheet";
 import {
   Check,
@@ -10,15 +10,13 @@ import {
   Clock,
   Info,
   Plus,
-  Moon,
-  Fuel,
   Tag,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AssignedJob } from "./AssignedJobCard";
 
 type PayoutMethod = "standard" | "instant";
-type Step = "confirm" | "charges" | "payout" | "success";
+type Step = "confirm" | "job-completed" | "charges" | "payout" | "success";
 
 interface CustomInvoiceItem {
   id: string;
@@ -32,6 +30,8 @@ interface CompleteJobModalProps {
   job: AssignedJob;
   onClose: () => void;
   onConfirm: (payoutMethod: PayoutMethod) => void;
+  /** Step to land on when the sheet opens — e.g. jump straight to "charges" from a reminder notification. */
+  initialStep?: Step;
 }
 
 const PAYMENT_PROCESSING_FEE = 0.33;
@@ -42,8 +42,6 @@ const INSTANT_PLATFORM_RATE = 0.15; // 15%
 
 const CHARGE_CATEGORIES: { label: string; icon: LucideIcon }[] = [
   { label: "Waiting Charge", icon: Clock },
-  { label: "Layover Charge", icon: Moon },
-  { label: "Fuel Surcharge", icon: Fuel },
   { label: "Other", icon: Tag },
 ];
 
@@ -62,9 +60,16 @@ export function CompleteJobModal({
   job,
   onClose,
   onConfirm,
+  initialStep,
 }: CompleteJobModalProps) {
-  const [step, setStep] = useState<Step>("confirm");
+  const [step, setStep] = useState<Step>(initialStep ?? "confirm");
   const [payoutMethod, setPayoutMethod] = useState<PayoutMethod>("standard");
+  const [completedAt, setCompletedAt] = useState<Date | null>(null);
+
+  // Re-sync to the requested entry step each time the sheet is (re)opened
+  useEffect(() => {
+    if (open) setStep(initialStep ?? "confirm");
+  }, [open]);
 
   // Custom invoice charges
   const [customItems, setCustomItems] = useState<CustomInvoiceItem[]>([]);
@@ -132,11 +137,12 @@ export function CompleteJobModal({
     setDraftCategory("");
     setDraftLabel("");
     setDraftAmount("");
+    setCompletedAt(null);
   };
 
   const handleClose = () => {
-    if (step === "success") {
-      // Job is already confirmed — dismissing the success screen continues the flow
+    if (step === "success" || step === "job-completed") {
+      // Job is already confirmed — dismissing the sheet continues the flow
       onConfirm(payoutMethod);
     } else {
       onClose();
@@ -162,11 +168,13 @@ export function CompleteJobModal({
         <SheetTitle className="sr-only">
           {step === "confirm"
             ? "Complete Job Confirmation"
-            : step === "charges"
-              ? "Additional Charges"
-              : step === "payout"
-                ? "Select Payout Method"
-                : "Job Completed"}
+            : step === "job-completed"
+              ? "Job Completed Successfully"
+              : step === "charges"
+                ? "Additional Charges"
+                : step === "payout"
+                  ? "Select Payout Method"
+                  : "Job Completed"}
         </SheetTitle>
 
         {/* Drag handle */}
@@ -202,10 +210,58 @@ export function CompleteJobModal({
                 Cancel
               </button>
               <button
+                onClick={() => {
+                  setCompletedAt(new Date());
+                  setStep("job-completed");
+                }}
+                className="h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer active:bg-[#e08820] transition-colors"
+              >
+                Complete <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 1.5: Job Completed (intermediate) ── */}
+        {step === "job-completed" && (
+          <div className="px-5 pb-8 pt-2">
+            {/* Hero */}
+            <div className="flex flex-col items-center text-center pt-4">
+              <div className="relative mb-5">
+                <span className="absolute inset-0 -m-3 rounded-full bg-green-500/5" />
+                <span className="absolute inset-0 -m-1.5 rounded-full bg-green-500/10" />
+                <div className="relative w-16 h-16 rounded-full bg-green-500 flex items-center justify-center shadow-lg shadow-green-500/30">
+                  <CheckCircle2 className="w-8 h-8 text-white" strokeWidth={2.2} />
+                </div>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">Job Completed Successfully</h2>
+              <p className="text-xs text-gray-400 mt-1.5">
+                {(completedAt ?? new Date()).toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </p>
+              <p className="text-sm text-gray-500 leading-relaxed mt-2 max-w-[280px]">
+                Invoice has been generated and sent to Pilot Car Driver for review.
+              </p>
+            </div>
+
+            {/* Actions — two columns */}
+            <div className="grid grid-cols-2 gap-3 mt-6">
+              <button
+                onClick={handleDone}
+                className="h-12 rounded-[6px] bg-gray-100 text-sm font-semibold text-gray-700 cursor-pointer active:bg-gray-200 transition-colors"
+              >
+                Go to Trips
+              </button>
+              <button
                 onClick={() => setStep("charges")}
                 className="h-12 rounded-[6px] bg-[#f89823] text-[#1a1a1a] text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer active:bg-[#e08820] transition-colors"
               >
-                Continue <ChevronRight className="w-4 h-4" />
+                View Invoice <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -321,7 +377,7 @@ export function CompleteJobModal({
                       htmlFor="charge-desc"
                       className="block text-xs font-medium text-gray-500 px-0.5"
                     >
-                      Description
+                      Charge Name
                     </label>
                     <input
                       id="charge-desc"
