@@ -41,7 +41,7 @@ const STANDARD_PLATFORM_RATE = 0.1; // 10%
 const INSTANT_PLATFORM_RATE = 0.15; // 15%
 
 const CHARGE_CATEGORIES: { label: string; icon: LucideIcon }[] = [
-  { label: "Waiting Charge", icon: Clock },
+  { label: "Layover Charge", icon: Clock },
   { label: "Other", icon: Tag },
 ];
 
@@ -245,7 +245,7 @@ export function CompleteJobModal({
                 })}
               </p>
               <p className="text-sm text-gray-500 leading-relaxed mt-2 max-w-[280px]">
-                Invoice has been generated and sent to Pilot Car Driver for review.
+                Your invoice has been submitted successfully. The Truck Driver has been notified to review the invoice.
               </p>
             </div>
 

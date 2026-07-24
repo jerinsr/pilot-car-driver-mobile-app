@@ -46,7 +46,7 @@ export function ActiveTimerIndicator({ timerState, onStop, onClick }: ActiveTime
 
   return (
     <div 
-      className={`fixed top-0 left-0 right-0 ${bgColor} text-white shadow-lg z-50 cursor-pointer animate-in slide-in-from-top duration-300`}
+      className={` fixed top-0 left-0 right-0 ${bgColor} text-white shadow-lg z-50 cursor-pointer animate-in slide-in-from-top duration-300`}
       onClick={onClick}
     >
       <div className="max-w-[450px] mx-auto px-4 py-3">
